@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --shoji-white: #FDFBF7;
+  --ink-black: #2D2D2D;
+  --bamboo-green: #7BA696;
+}
+
+body {
+  background-color: var(--shoji-white);
+  color: var(--ink-black);
+}
+
+.auth-container {
+  @apply max-w-md mx-auto mt-20 p-8 bg-white rounded-lg shadow-md;
+  border: 1px solid #E5E7EB;
+}
+
+.auth-input {
+  @apply w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-bamboo-green;
+  background-color: var(--shoji-white);
+}
+
+.auth-button {
+  @apply w-full py-2 mt-4 text-white rounded-md transition-colors;
+  background-color: var(--bamboo-green);
+}
+
+.auth-button:hover {
+  @apply opacity-90;
+}
