@@ -6,11 +6,17 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter"
 import clientPromise from '@/lib/mongodb-adapter'
 
 const handler = NextAuth({
-  debug: true, // Enable debug logs to see what's happening
+  debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
   useSecureCookies: process.env.NODE_ENV === 'production',
   adapter: MongoDBAdapter(clientPromise, {
     databaseName: 'auth-db',
+    collections: {
+      Users: 'users',
+      Sessions: 'sessions',
+      Accounts: 'accounts',
+      VerificationTokens: 'verification_tokens',
+    }
   }),
   cookies: {
     sessionToken: {

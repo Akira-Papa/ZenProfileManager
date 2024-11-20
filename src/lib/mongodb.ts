@@ -24,51 +24,60 @@ process.on('unhandledRejection', (error: any) => {
 
 async function connectDB() {
   try {
-    // Validate MongoDB URI
     if (!process.env.MONGODB_URI) {
       throw new Error('MongoDB URI is not defined');
     }
 
     if (cached.conn) {
-      console.log('Using existing MongoDB connection');
       return cached.conn;
     }
 
     if (!cached.promise) {
       const opts = {
         bufferCommands: false,
-        serverSelectionTimeoutMS: 30000,
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 30000,
+        family: 4,
         retryWrites: true,
         retryReads: true,
         maxPoolSize: 10,
         minPoolSize: 5,
+        connectTimeoutMS: 10000,
+        keepAlive: true,
+        keepAliveInitialDelay: 300000
       };
 
-      console.log('Initializing new MongoDB connection...');
-      cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then(mongoose => {
-        console.log('MongoDB connection established successfully');
-        mongoose.connection.on('error', (err) => {
-          console.error('MongoDB connection error:', err);
+      cached.promise = mongoose.connect(process.env.MONGODB_URI, opts)
+        .then((mongoose) => {
+          console.log('MongoDB connected successfully');
+          
+          mongoose.connection.on('error', (err) => {
+            console.error('MongoDB connection error:', err);
+            cached.conn = null;
+            cached.promise = null;
+          });
+
+          mongoose.connection.on('disconnected', () => {
+            console.warn('MongoDB disconnected, attempting reconnect...');
+            cached.conn = null;
+            cached.promise = null;
+          });
+
+          mongoose.connection.on('reconnected', () => {
+            console.log('MongoDB reconnected successfully');
+          });
+
+          return mongoose;
         });
-        mongoose.connection.on('disconnected', () => {
-          console.warn('MongoDB disconnected');
-        });
-        mongoose.connection.on('reconnected', () => {
-          console.log('MongoDB reconnected');
-        });
-        return mongoose;
-      });
     }
 
     cached.conn = await cached.promise;
     return cached.conn;
   } catch (error: any) {
     console.error('MongoDB connection error:', error.message);
-    // Clear the cached connection and promise
     cached.promise = null;
     cached.conn = null;
-    throw error;
+    throw new Error(`Failed to connect to MongoDB: ${error.message}`);
   }
 }
 

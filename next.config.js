@@ -1,16 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure for Replit environment
   output: 'standalone',
   experimental: {
     serverMinification: false,
   },
-
-  // Configure headers for API and authentication routes
+  webpack: (config) => {
+    config.externals = [...(config.externals || []), 'canvas', 'jsdom'];
+    return config;
+  },
   async headers() {
     return [
       {
-        // Apply these headers to all API routes
         source: '/api/:path*',
         headers: [
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
@@ -21,12 +21,10 @@ const nextConfig = {
       },
     ];
   },
-
-  // Configure webpack for NextAuth.js
-  webpack: (config) => {
-    config.externals = [...(config.externals || []), 'canvas', 'jsdom'];
-    return config;
-  },
+  reactStrictMode: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  }
 }
 
 module.exports = nextConfig
