@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configure hostname and port for Replit environment
-  hostname: '0.0.0.0',
-  port: 3000,
+  // Configure for Replit environment
+  output: 'standalone',
+  experimental: {
+    serverMinification: false,
+  },
 
   // Configure headers for API and authentication routes
   async headers() {

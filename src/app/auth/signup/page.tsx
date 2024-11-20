@@ -18,11 +18,23 @@ export default function SignUp() {
     }
 
     try {
-      // In a real application, you would make an API call to create the user
-      // For now, we'll just redirect to the sign-in page
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'アカウントの作成に失敗しました。');
+      }
+
       router.push('/auth/signin');
-    } catch (error) {
-      setError('アカウントの作成に失敗しました。');
+    } catch (error: any) {
+      setError(error.message || 'アカウントの作成に失敗しました。');
     }
   };
 
