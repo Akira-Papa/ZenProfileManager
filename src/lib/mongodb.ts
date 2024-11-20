@@ -4,14 +4,13 @@ if (!process.env.MONGODB_URI) {
   throw new Error('Please add your MongoDB URI to .env');
 }
 
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { 
-    conn: null, 
-    promise: null 
-  };
-}
+const cached: {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+} = (global as any).mongoose || {
+  conn: null,
+  promise: null
+};
 
 // Clear cache if connection fails
 process.on('unhandledRejection', (error: any) => {
@@ -35,16 +34,17 @@ async function connectDB() {
     if (!cached.promise) {
       const opts = {
         bufferCommands: false,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 30000,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
         family: 4,
         retryWrites: true,
         retryReads: true,
-        maxPoolSize: 10,
-        minPoolSize: 5,
+        maxPoolSize: process.env.NODE_ENV === 'production' ? 50 : 10,
+        minPoolSize: process.env.NODE_ENV === 'production' ? 10 : 5,
         connectTimeoutMS: 10000,
         keepAlive: true,
-        keepAliveInitialDelay: 300000
+        keepAliveInitialDelay: 300000,
+        autoIndex: false // Don't build indexes in production
       };
 
       cached.promise = mongoose.connect(process.env.MONGODB_URI, opts)

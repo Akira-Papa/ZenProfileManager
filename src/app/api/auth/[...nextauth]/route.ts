@@ -1,23 +1,15 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import connectDB from '@/lib/mongodb'
-import User from '@/models/User'
 import { MongoDBAdapter } from "@auth/mongodb-adapter"
-import clientPromise from '@/lib/mongodb-adapter'
+import clientPromise from '../../../../lib/mongodb-adapter'
+import connectDB from '../../../../lib/mongodb'
+import User from '../../../../models/User'
 
 const handler = NextAuth({
   debug: process.env.NODE_ENV === 'development',
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'your-development-secret',
   useSecureCookies: process.env.NODE_ENV === 'production',
-  adapter: MongoDBAdapter(clientPromise, {
-    databaseName: 'auth-db',
-    collections: {
-      Users: 'users',
-      Sessions: 'sessions',
-      Accounts: 'accounts',
-      VerificationTokens: 'verification_tokens',
-    }
-  }),
+  adapter: MongoDBAdapter(clientPromise),
   cookies: {
     sessionToken: {
       name: 'next-auth.session-token',

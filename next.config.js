@@ -3,9 +3,35 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     serverMinification: false,
+    optimizeCss: true,
+    serverActions: true,
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+      };
+    }
+    
     config.externals = [...(config.externals || []), 'canvas', 'jsdom'];
+    config.resolve = {
+      ...config.resolve,
+      fallback: {
+        ...config.resolve?.fallback,
+        "mongodb-client-encryption": false,
+        "aws4": false,
+        "kerberos": false,
+        "supports-color": false,
+        "snappy": false,
+        "bson-ext": false,
+        "@mongodb-js/zstd": false,
+        "mongodb": require.resolve("mongodb"),
+      }
+    };
     return config;
   },
   async headers() {

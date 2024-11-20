@@ -5,55 +5,68 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI
-const options = {
+const options: MongoClientOptions = {
   connectTimeoutMS: 10000,
   serverSelectionTimeoutMS: 10000,
   socketTimeoutMS: 45000,
   family: 4,
   retryWrites: true,
   retryReads: true,
-  maxPoolSize: 10,
-  minPoolSize: 5,
-  keepAlive: true
+  maxPoolSize: process.env.NODE_ENV === 'production' ? 50 : 10,
+  minPoolSize: process.env.NODE_ENV === 'production' ? 10 : 5,
+  keepAlive: true,
+  writeConcern: {
+    w: 'majority',
+    wtimeoutMS: 2500,
+  },
+  compressors: ['zlib'] as ("snappy" | "zlib" | "none" | "zstd")[],
+  directConnection: true
 }
 
-let client
-let clientPromise: Promise<MongoClient>
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
-try {
-  if (process.env.NODE_ENV === 'development') {
-    let globalWithMongo = global as typeof globalThis & {
-      _mongoClientPromise?: Promise<MongoClient>
+const connectWithRetry = async (retries = 3, delay = 1000): Promise<MongoClient> => {
+  try {
+    client = new MongoClient(uri, options);
+    return await client.connect();
+  } catch (error) {
+    if (retries > 0) {
+      console.warn(`MongoDB connection failed, retrying... (${retries} attempts left)`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return connectWithRetry(retries - 1, delay * 2);
     }
+    throw error;
+  }
+};
 
-    if (!globalWithMongo._mongoClientPromise) {
-      client = new MongoClient(uri, options)
-      globalWithMongo._mongoClientPromise = client.connect()
-        .then(client => {
-          console.log('MongoDB adapter connected successfully');
-          return client;
-        })
-        .catch(error => {
-          console.error('MongoDB adapter connection error:', error);
-          throw error;
-        });
-    }
-    clientPromise = globalWithMongo._mongoClientPromise
-  } else {
-    client = new MongoClient(uri, options)
-    clientPromise = client.connect()
+if (process.env.NODE_ENV === 'development') {
+  let globalWithMongo = global as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>
+  }
+
+  if (!globalWithMongo._mongoClientPromise) {
+    globalWithMongo._mongoClientPromise = connectWithRetry()
       .then(client => {
         console.log('MongoDB adapter connected successfully');
         return client;
-      })
-      .catch(error => {
-        console.error('MongoDB adapter connection error:', error);
-        throw error;
       });
   }
-} catch (error) {
-  console.error('MongoDB adapter initialization error:', error);
-  throw error;
+  clientPromise = globalWithMongo._mongoClientPromise;
+} else {
+  clientPromise = connectWithRetry()
+    .then(client => {
+      console.log('MongoDB adapter connected successfully');
+      return client;
+    });
 }
+
+// Handle cleanup
+process.on('SIGTERM', async () => {
+  if (client) {
+    await client.close();
+    console.log('MongoDB connection closed due to app termination');
+  }
+});
 
 export default clientPromise
